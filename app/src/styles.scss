@@ -1,0 +1,167 @@
+// cdocx Material 3 theme.
+// Palettes in styles/_theme-colors.scss are generated from the brand colours
+// (Spark Green primary, Spark Mint tertiary, Slate neutral). Regenerate with:
+//   ng generate @angular/material:theme-color --primary-color="#00A37A" \
+//     --tertiary-color="#5CF2C4" --neutral-color="#5B6275" --directory=src/styles/
+// Learn more: https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+@use './styles/theme-colors' as cdocx;
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/fonts/BricolageGrotesque-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/fonts/BricolageGrotesque-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+html {
+  height: 100%;
+  // Follow the user's OS light/dark setting.
+  color-scheme: light dark;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: cdocx.$primary-palette,
+        tertiary: cdocx.$tertiary-palette,
+      ),
+      typography: (
+        plain-family: (
+          'Bricolage Grotesque',
+          'Helvetica Neue',
+          Arial,
+          sans-serif,
+        ),
+        brand-family: (
+          'Bricolage Grotesque',
+          'Helvetica Neue',
+          Arial,
+          sans-serif,
+        ),
+        bold-weight: 700,
+        medium-weight: 700,
+        regular-weight: 400,
+      ),
+      density: 0,
+    )
+  );
+
+  // Accessibility: honour the OS "increase contrast" setting.
+  @media (prefers-contrast: more) {
+    @include cdocx.high-contrast-overrides(color-scheme);
+  }
+}
+
+body {
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+// Launch splash, from cdocx-brand-package/motion/cdocx-splash.html.
+// Colour vars are prefixed with --splash- to avoid clashing with the Material theme.
+:root {
+  --splash-bg: #f3f4f6;
+  --splash-ink: #0b0b0f;
+  --splash-spark: #00a37a;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --splash-bg: #0b0b0f;
+    --splash-ink: #ffffff;
+    --splash-spark: #5cf2c4;
+  }
+}
+
+/* ---- splash: copied from cdocx-splash.html ---- */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--splash-bg);
+  transition: opacity 0.4s ease 0.1s;
+}
+.splash.out {
+  opacity: 0;
+  pointer-events: none;
+}
+.mark {
+  width: 132px;
+  height: 132px;
+  overflow: visible;
+  transition:
+    transform 0.5s cubic-bezier(0.55, 0, 0.7, 0.2),
+    opacity 0.4s ease;
+}
+.splash.out .mark {
+  transform: scale(3.2);
+  opacity: 0;
+}
+.ring {
+  fill: none;
+  stroke: var(--splash-ink);
+  stroke-width: 11;
+  stroke-linecap: round;
+}
+.spark {
+  fill: var(--splash-spark);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* timeline: ring 0-0.75s (one full anticlockwise turn from the top, then static) | spark 0.5-0.95s | hold | exit 1.1s */
+.play .ring {
+  transform-origin: 53.25px 60px;
+  animation: draw 0.75s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+.play .spark {
+  animation: pop 0.45s 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes draw {
+  0% {
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 82;
+    opacity: 0;
+    transform: rotate(360deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transform: rotate(0);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play .ring,
+  .play .spark {
+    animation: none;
+  }
+  .mark,
+  .splash {
+    transition: none;
+  }
+}
+/* ---- end splash ---- */

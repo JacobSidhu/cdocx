@@ -1,0 +1,24 @@
+# Only the app and its workflows are tracked for now.
+# To start tracking another folder, add a "!/<folder>/" line below.
+/*
+!/.gitignore
+!/.gitattributes
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/app-*.yml
+!/app/
+
+# Build and dependency output (app/.gitignore covers the Angular specifics)
+node_modules/
+dist/
+.angular/
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/

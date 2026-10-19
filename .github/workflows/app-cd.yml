@@ -1,0 +1,86 @@
+name: App CD
+
+# Deploys the build produced by App CI. This workflow never builds or tests.
+#  - dev:          automatically after App CI succeeds on main
+#  - stage / prod: manually via workflow_dispatch (promotes an existing CI build)
+
+on:
+  workflow_run:
+    workflows: ["App CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [dev, stage, prod]
+        required: true
+      ci_run_id:
+        description: App CI run ID to deploy (blank = latest successful run on main)
+        type: string
+        required: false
+
+concurrency:
+  group: app-cd-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read # download artifacts from the App CI run
+  id-token: write # AWS OIDC
+
+jobs:
+  deploy:
+    name: Deploy (${{ github.event.inputs.environment || 'dev' }})
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Resolve CI run
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN_ID: ${{ github.event.inputs.ci_run_id }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          if [ -n "$WORKFLOW_RUN_ID" ]; then
+            run_id="$WORKFLOW_RUN_ID"
+          elif [ -n "$INPUT_RUN_ID" ]; then
+            run_id="$INPUT_RUN_ID"
+          else
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow app-ci.yml \
+              --branch main --status success --limit 1 --json databaseId -q '.[0].databaseId')
+          fi
+          [ -n "$run_id" ] || { echo "No App CI run found"; exit 1; }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-dist
+          path: dist
+          run-id: ${{ steps.ci.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload to S3
+        env:
+          BUCKET: ${{ vars.APP_S3_BUCKET }}
+        run: |
+          aws s3 sync dist/cdocx-app/browser "s3://$BUCKET" --delete \
+            --exclude index.html --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp dist/cdocx-app/browser/index.html "s3://$BUCKET/index.html" \
+            --cache-control "no-cache"
+
+      - name: Invalidate CloudFront
+        env:
+          DISTRIBUTION_ID: ${{ vars.APP_CLOUDFRONT_DISTRIBUTION_ID }}
+        run: aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/index.html"
