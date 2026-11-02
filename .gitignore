@@ -9,6 +9,8 @@
 /.github/workflows/*
 !/.github/workflows/app-*.yml
 !/app/
+!/AGENTS.md
+!/CLAUDE.md
 
 # Build and dependency output (app/.gitignore covers the Angular specifics)
 node_modules/
